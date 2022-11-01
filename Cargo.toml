@@ -8,6 +8,7 @@ description = "Safe FFI for PBSPro HPC job scheduler"
 
 [dependencies]
 bindgen = "0.61"
+libc = "0.2"
 
 [build-dependencies]
 bindgen = "0.61"

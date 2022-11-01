@@ -7,8 +7,9 @@ use std::path::PathBuf;
 fn main() {
     // add libclang to link path only needed to generate bindings
     let libclang_path = env::var("LIBCLANG_PATH").unwrap();
+    let pbs_path = env::var("PBS_PATH").unwrap();
     println!("cargo-rustc-link-search={}",libclang_path);
-    println!("cargo-rustc-link-search=/opt/pbs/lib");
+    println!("cargo-rustc-link-search={}/lib", pbs_path);
 
     // Tell cargo to tell rustc to link the system pbs
     println!("cargo:rustc-link-lib=pbs");
@@ -23,7 +24,7 @@ fn main() {
         // The input header we would like to generate
         // bindings for.
         .header("wrapper.h")
-        .clang_arg("-I/opt/pbs/include")
+        .clang_arg(format!("-I{}/include",pbs_path))
         .clang_arg(format!("-I{}/clang/16.0.0/include", libclang_path))
         // Tell cargo to invalidate the built crate whenever any of the
         // included header files changed.
