@@ -9,6 +9,7 @@ description = "Safe FFI for PBSPro HPC job scheduler"
 [dependencies]
 bindgen = "0.61"
 libc = "0.2"
+linked_list_c = { path = "../linked_list" }
 
 [build-dependencies]
 bindgen = "0.61"

@@ -43,10 +43,6 @@ impl attropl {
         for mut a in resp.as_mut_slice() {
             a.next = last;
             last = a;
-            println!("---------------------------");
-            println!("{:#?}", last);
-            println!("{:#?}", a);
-            println!("===========================");
         }
         resp
     }
