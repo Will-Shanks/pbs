@@ -10,6 +10,8 @@ use std::ffi::{CStr, CString};
 use std::ptr::null;
 
 
+// TODO name should probably be an enum
+// all attribs are constants in bindings as ATTR_*
 #[derive(Debug)]
 pub struct Attrib{
     name:CString,
@@ -53,3 +55,4 @@ pub fn get_err() -> String {
         CStr::from_ptr(pbse_to_txt(*__pbs_errno_location())).to_str().unwrap().to_string()
     }
 }
+
