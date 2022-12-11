@@ -7,9 +7,9 @@ include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
 
 use std::ffi::{CStr, CString};
-use std::ptr::null;
+use std::ptr::null_mut;
 
-
+/*
 // TODO name should probably be an enum
 // all attribs are constants in bindings as ATTR_*
 #[derive(Debug)]
@@ -24,29 +24,37 @@ impl Attrib {
         Attrib{name: n, value: v, resource: r}
     }
 }
+*/
 
 impl attropl {
-    pub fn new(attribs: &Vec<Attrib>) -> Vec<attropl> {
-        let mut resp = Vec::new();
-        for attrib in attribs {
-            let temp = attropl {
-                next: null::<i8>() as *mut attropl,
-                name: attrib.name.as_ptr() as *mut i8,
-                resource: match &attrib.resource {
-                    Some(r) => r.as_ptr() as *mut i8,
-                    None => null::<i8>() as *mut i8
-                },
-                value: attrib.value.as_ptr() as *mut i8,
-                op: batch_op_SET
-            };
-            resp.push(temp);
+    pub fn new(name: &str, value: &str, resource: Option<&str>) -> Box<attropl> {
+        let name = CString::new(name).unwrap();
+        let value = CString::new(value).unwrap();
+        let myresource = match resource {
+            Some(r) => Some(CString::new(r).unwrap()),
+            None => None
         };
-        let mut last = null::<i8>() as *mut attropl;
-        for mut a in resp.as_mut_slice() {
-            a.next = last;
-            last = a;
+        Box::new(attropl{
+            name: name.into_raw() as *mut i8,
+            value: value.into_raw() as *mut i8,
+            resource: if let Some(r) = myresource {
+                r.into_raw() as *mut i8
+            }else{
+                null_mut()
+            },
+            op: batch_op_SET,
+            next: null_mut(),
+        })
+    }
+
+    pub fn drop(s: *mut attropl) {
+        let obj = unsafe{*s};
+        let _ = unsafe{CString::from_raw(obj.name)};
+        let _ = unsafe{CString::from_raw(obj.value)};
+        if !obj.resource.is_null() {
+            let _ = unsafe{CString::from_raw(obj.resource)};
         }
-        resp
+        drop(s);
     }
 }
 

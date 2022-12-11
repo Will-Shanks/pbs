@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::ptr::{null, null_mut, NonNull};
+use std::ptr::{null_mut, NonNull};
 use std::ffi::{CStr,CString};
 
 mod bindings;
@@ -117,31 +117,26 @@ impl Job {
         Job { name:n, queue: q, script: s, account: a, stdout: stdout, select: select, walltime: w}
     }
     pub fn submit(&self) -> Result<String, String> {
-        let mut job_info = Vec::new();
-        job_info.push(bindings::Attrib::new(CString::new("Job_Name").unwrap(), CString::new(self.name.clone()).unwrap(), None));
-        job_info.push(bindings::Attrib::new(CString::new("Account_Name").unwrap(), CString::new(self.account.clone()).unwrap(), None)); 
-        job_info.push(bindings::Attrib::new(CString::new("Resource_List").unwrap(), CString::new(self.select.clone()).unwrap(), Some(CString::new("select").unwrap())));
-        job_info.push(bindings::Attrib::new(CString::new("Resource_List").unwrap(), CString::new(self.walltime.clone()).unwrap(), Some(CString::new("walltime").unwrap())));
-
-        //FIXME add place to Job struct
-        job_info.push(bindings::Attrib::new(CString::new("Resource_List").unwrap(), CString::new("exclhost").unwrap(),Some(CString::new("place").unwrap())));
-
+        let mut attribs = unsafe{List::with_custom_drop(null_mut(), Some(bindings::attropl::drop))};
+        attribs.add(bindings::attropl::new("Job_Name", &self.name, None));
+        attribs.add(bindings::attropl::new("Account_Name", &self.account, None)); 
+        attribs.add(bindings::attropl::new("Resource_List", &self.select, Some("select")));
+        attribs.add(bindings::attropl::new("Resource_List", &self.walltime, Some("walltime")));
+        attribs.add(bindings::attropl::new("Resource_List", "exclhost", Some("place")));
         if let Some(o) = &self.stdout {
-            job_info.push(bindings::Attrib::new(CString::new("Output_Path").unwrap(), CString::new(o.clone()).unwrap(), None)); 
+            attribs.add(bindings::attropl::new("Output_Path", &o, None)); 
         }
-        let attribs = bindings::attropl::new(&job_info); 
+
         let jobscript = CString::new(self.script.clone()).unwrap();
         let queue = CString::new(self.queue.clone()).unwrap();
+        let conn = Conn::new();
         unsafe {
-            let mut a = attribs.get(attribs.len()-1).unwrap().clone();
-            let conn = bindings::pbs_connect(null::<i8>() as *mut i8);
-            let jobid = bindings::pbs_submit(conn,
-                                             &mut a,
+            let jobid = bindings::pbs_submit(conn.get(),
+                                             attribs.head(),
                                              jobscript.as_ptr() as *mut i8,
                                              queue.as_ptr() as *mut i8,
-                                             null::<i8>() as *mut i8);
-            bindings::pbs_disconnect(conn);
-            if jobid != null::<i8>() as *mut i8 {
+                                             null_mut());
+            if jobid != null_mut() {
                 let resp = Ok(CStr::from_ptr(jobid).to_str().unwrap().to_string());
                 libc::free(jobid as *mut libc::c_void);
                 resp
