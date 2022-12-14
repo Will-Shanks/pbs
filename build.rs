@@ -28,6 +28,7 @@ fn main() {
         .clang_arg(format!("-I{}/clang/16.0.0/include", libclang_path))
         // Tell cargo to invalidate the built crate whenever any of the
         // included header files changed.
+        .no_copy("attropl")
         .parse_callbacks(Box::new(bindgen::CargoCallbacks))
         // Finish the builder and generate the bindings.
         .generate()
@@ -37,6 +38,6 @@ fn main() {
     // Write the bindings to the $OUT_DIR/bindings.rs file.
     let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
     bindings
-        .write_to_file(out_path.join("bindings.rs"))
+        .write_to_file(out_path.join("pbsffi.rs"))
         .expect("Couldn't write bindings!");
 }
