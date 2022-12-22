@@ -1,6 +1,6 @@
 [package]
 name = "pbs"
-version = "0.0.1"
+version = "0.0.2"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/Will-Shanks/pbs-rs"
@@ -9,8 +9,8 @@ description = "Safe FFI for PBSPro HPC job scheduler"
 [dependencies]
 bindgen = "0.61"
 libc = "0.2"
-linked_list_c = { path = "../linked_list" }
-clap = { version = "4.0" }
+linked_list_c = "0.0.1" 
+clap = { version = "4.0", features = ["derive"] } 
 
 [build-dependencies]
 bindgen = "0.61"

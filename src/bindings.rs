@@ -79,6 +79,18 @@ impl Server {
         unsafe{List::with_custom_drop(data, None, Some(|x: *mut ffi::batch_status| ffi::pbs_statfree(x)))}
             .map(|x| x.into() )
     }
+    pub fn submit(&self, attributes: Vec<Attrl>, script: &str, queue: &str) -> Result<String, String> {
+        let attribs: List<ffi::attrl> = attributes.into();
+        //ffi::attropl and ffi::attrl are interchangable
+        let jobid = unsafe{ffi::pbs_submit(self.conn, attribs.head() as *mut ffi::attropl, str_to_cstr(script), str_to_cstr(queue), null_mut())}; 
+        if jobid != null_mut() {
+            let resp = Ok(unsafe{CStr::from_ptr(jobid)}.to_str().unwrap().to_string());
+            unsafe{libc::free(jobid as *mut libc::c_void)};
+            resp
+        } else {
+            Err(get_err())
+        }
+    }
 }
  
 // struct used in job/resv submission
@@ -95,11 +107,23 @@ impl ffi::attrl {
 }
 
 impl Attrl<'_> {
+    pub fn new<'a>(n: &'a str, v: &'a str, r: Option<&'a str>) -> Attrl<'a> {
+        Attrl{name:n, value:v, resource: r}
+    } 
     fn parse_name_resource(input: &str) -> (&str, Option<&str>) {
         let mut attrib = input.split(".");
         let n = attrib.next().unwrap();
         let r = attrib.next();
         (n, r)
+    }
+    pub fn name(&self) -> &str {
+        self.name
+    }
+    pub fn resource(&self) -> Option<&str> {
+        self.resource
+    }
+    pub fn value(&self) -> &str {
+        self.value
     }
 }
 
@@ -119,10 +143,9 @@ impl Status<'_> {
         self.attribs_iter().map(|x| {
             let k = if let Some(r) = x.resource { format!("{}.{}", x.name, r) } else {x.name.to_owned()};
             let v = x.value.to_owned();
-            println!("{}, {}", k, v);
             (k, v)
         }).collect() 
-    }
+   }
     pub fn new<'a>(name: &'a str, attribs: Vec<Attrl>) -> Status<'a>{
         let mut l = List::new();
         attribs.iter().for_each(|x| l.add(Box::new(x.into())));
