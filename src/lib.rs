@@ -1,4 +1,4 @@
 
 mod bindings;
-pub use bindings::{ResourceType, Job, Server, Status};
+pub use bindings::{Attrl, Resource, Server, Status};
 

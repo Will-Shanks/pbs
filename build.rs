@@ -21,14 +21,18 @@ fn main() {
     // to bindgen, and lets you build up options for
     // the resulting bindings.
     let bindings = bindgen::Builder::default()
+        .rustfmt_bindings(true)
+        .generate_comments(true)
         // The input header we would like to generate
         // bindings for.
         .header("wrapper.h")
         .clang_arg(format!("-I{}/include",pbs_path))
         .clang_arg(format!("-I{}/clang/16.0.0/include", libclang_path))
+        .clang_arg("-fparse-all-comments")
+        .clang_arg("-fretain-comments-from-system-headers")
         // Tell cargo to invalidate the built crate whenever any of the
         // included header files changed.
-        .no_copy("attropl")
+        .derive_copy(false)
         .parse_callbacks(Box::new(bindgen::CargoCallbacks))
         // Finish the builder and generate the bindings.
         .generate()
