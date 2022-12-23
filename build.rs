@@ -1,13 +1,16 @@
-//only needed to generate bindings
+#[cfg(feature="bindgen")]
 extern crate bindgen;
 
 use std::env;
+#[cfg(feature="bindgen")]
 use std::path::PathBuf;
 
 fn main() {
     // add libclang to link path only needed to generate bindings
+    #[cfg(feature="bindgen")]
     let libclang_path = env::var("LIBCLANG_PATH").unwrap();
     let pbs_path = env::var("PBS_PATH").unwrap();
+    #[cfg(feature="bindgen")]
     println!("cargo-rustc-link-search={}",libclang_path);
     println!("cargo-rustc-link-search={}/lib", pbs_path);
 
@@ -20,6 +23,7 @@ fn main() {
     // The bindgen::Builder is the main entry point
     // to bindgen, and lets you build up options for
     // the resulting bindings.
+    #[cfg(feature="bindgen")]
     let bindings = bindgen::Builder::default()
         .rustfmt_bindings(true)
         .generate_comments(true)
@@ -40,7 +44,9 @@ fn main() {
         .expect("Unable to generate bindings");
 
     // Write the bindings to the $OUT_DIR/bindings.rs file.
+    #[cfg(feature="bindgen")]
     let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
+    #[cfg(feature="bindgen")]
     bindings
         .write_to_file(out_path.join("pbsffi.rs"))
         .expect("Couldn't write bindings!");

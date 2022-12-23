@@ -2,7 +2,13 @@ use linked_list_c::List;
 use std::ffi::{CStr, CString};
 use std::ptr::null_mut;
 use std::collections::HashMap;
+
+#[cfg(feature="bindgen")]
 mod ffi;
+#[cfg(not(feature="bindgen"))]
+mod pbsffi;
+#[cfg(not(feature="bindgen"))]
+use pbsffi as ffi;
 
 linked_list_c::impl_LlItem!{[ffi::attrl, ffi::batch_status, ffi::attropl]}
 
@@ -26,8 +32,8 @@ pub struct Attrl<'a> {
     value: &'a str
 }
 
-//TODO put clap::ValueEnum behind a feature
-#[derive(Debug, Clone, clap::ValueEnum)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature="clap", derive(clap::ValueEnum))]
 pub enum Resource {
     Hostname,
     Que,
