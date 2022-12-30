@@ -8,10 +8,11 @@ description = "Safe FFI for PBSPro HPC job scheduler"
 keywords = ["pbs", "hpc"]
 
 [dependencies]
-bindgen = { version = "0.61", optional = true }
+bindgen = { version = "0.63", optional = true }
 libc = "0.2"
 linked_list_c = { path = "../linked_list" } 
 clap = { version = "4.0", features = ["derive"], optional = true}
+log = "0.4"
 
 [build-dependencies]
-bindgen = { version = "0.61", optional = true }
+bindgen = { version = "0.63", optional = true }

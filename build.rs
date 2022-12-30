@@ -12,7 +12,7 @@ fn main() {
     let pbs_path = env::var("PBS_PATH").unwrap();
     #[cfg(feature="bindgen")]
     println!("cargo-rustc-link-search={}",libclang_path);
-    println!("cargo-rustc-link-search={}/lib", pbs_path);
+    println!("cargo-rustc-link-search={pbs_path}/lib");
 
     // Tell cargo to tell rustc to link the system pbs
     println!("cargo:rustc-link-lib=pbs");

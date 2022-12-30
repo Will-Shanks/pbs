@@ -2,6 +2,7 @@ use linked_list_c::List;
 use std::ffi::{CStr, CString};
 use std::ptr::null_mut;
 use std::collections::HashMap;
+use log::{trace, debug, warn};
 
 #[cfg(feature="bindgen")]
 mod ffi;
@@ -56,13 +57,16 @@ unsafe extern fn srv_stat(conn: i32, n: *mut i8, a: *mut ffi::attrl, _ex: *mut i
 
 impl Server {
     pub fn new() -> Server {
+        trace!("Connecting to pbs server");
         Server{conn: unsafe{ffi::pbs_connect(null_mut())}}
     }
     pub fn connect_to(srv: &str) -> Server {
+        trace!("Connecting to pbs server {}", srv);
         let server = CString::new(srv.to_string()).unwrap();
         Server{conn: unsafe{ffi::pbs_connect(server.as_ptr() as *mut i8)}}
     }
     pub fn stat(&self, res: Resource, name: Option<String>, info: Vec<Attrl>) -> impl Iterator<Item = Status> {
+        debug!("Performing a {:?} stat", &res);
         let api = match res {
             Resource::Hostname => ffi::pbs_stathost,
             Resource::Job => ffi::pbs_statjob,
@@ -75,6 +79,7 @@ impl Server {
         };
 	let a: List<ffi::attrl> = info.into();
         let n_ptr = optstr_to_cstr(name.as_deref());
+        //TODO what if errors?
         let data = {
             let resp = unsafe{api(self.conn, n_ptr, a.head(), null_mut())};
             if !n_ptr.is_null() {
@@ -82,18 +87,25 @@ impl Server {
             }
             resp
         };
+        trace!("{:?} complete, returning list", &res);
         unsafe{List::with_custom_drop(data, None, Some(|x: *mut ffi::batch_status| ffi::pbs_statfree(x)))}
             .map(|x| x.into() )
     }
+
     pub fn submit(&self, attributes: Vec<Attrl>, script: &str, queue: &str) -> Result<String, String> {
+        trace!("Job submission, generating attributes list");
         let attribs: List<ffi::attrl> = attributes.into();
         //ffi::attropl and ffi::attrl are interchangable
+        trace!("Submitting job request");
         let jobid = unsafe{ffi::pbs_submit(self.conn, attribs.head() as *mut ffi::attropl, str_to_cstr(script), str_to_cstr(queue), null_mut())}; 
-        if jobid != null_mut() {
+        trace!("Submitted, resp at {:?}", &jobid);
+        if !jobid.is_null() {
             let resp = Ok(unsafe{CStr::from_ptr(jobid)}.to_str().unwrap().to_string());
+            trace!("Job submitted, got resp {:?}", &resp);
             unsafe{libc::free(jobid as *mut libc::c_void)};
             resp
         } else {
+            warn!("Error submitting job {}", get_err());
             Err(get_err())
         }
     }
@@ -117,7 +129,7 @@ impl Attrl<'_> {
         Attrl{name:n, value:v, resource: r}
     } 
     fn parse_name_resource(input: &str) -> (&str, Option<&str>) {
-        let mut attrib = input.split(".");
+        let mut attrib = input.split('.');
         let n = attrib.next().unwrap();
         let r = attrib.next();
         (n, r)
@@ -141,7 +153,7 @@ impl Status<'_> {
         self.name
     }
     pub fn attribs_iter(&self) -> impl Iterator<Item = Attrl> {
-        unsafe{List::with_custom_drop(self.attribs, None, None)}.map(|x| {
+        List::with_custom_drop(self.attribs, None, None).map(|x| {
             x.into()
         })
     }
@@ -155,7 +167,7 @@ impl Status<'_> {
     pub fn new<'a>(name: &'a str, attribs: Vec<Attrl>) -> Status<'a>{
         let mut l = List::new();
         attribs.iter().for_each(|x| l.add(Box::new(x.into())));
-        Status{name: name.clone(), attribs: unsafe{l.head()} , text: None}
+        Status{name, attribs: l.head() , text: None}
     }
 }
 
@@ -188,6 +200,12 @@ impl Resource {
     }
 }*/
 
+impl Default for Server {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl From<&Attrl<'_>> for ffi::attrl {
     fn from(a: &Attrl) -> Self {
         ffi::attrl::new(a.name, a.value, a.resource)
@@ -216,7 +234,7 @@ impl From<&ffi::attrl> for Attrl<'_> {
 impl<'a> From<&'a str> for Attrl<'a> {
     //expected string format: "name[.resource][=value]"
     fn from(input: &'a str) -> Attrl<'a> {
-        let mut split = input.split("=");
+        let mut split = input.split('=');
         let (n, r) = Self::parse_name_resource(split.next().unwrap());
         let v = split.next().unwrap_or("");
         //todo figure out how not to need .to_string()
@@ -264,9 +282,9 @@ impl std::fmt::Display for Attrl<'_> {
 
 impl std::fmt::Display for Status<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}\n", self.name)?;
+        writeln!(f, "{}", self.name)?;
         for a in self.attribs_iter() {
-            write!(f, "\t{}\n", a)?;
+            writeln!(f, "\t{a}")?;
         }
         Ok(())
     }
