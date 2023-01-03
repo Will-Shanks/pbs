@@ -7,10 +7,12 @@ repository = "https://github.com/Will-Shanks/pbs-rs"
 description = "Safe FFI for PBSPro HPC job scheduler"
 keywords = ["pbs", "hpc"]
 
+publish = false
+
 [dependencies]
 bindgen = { version = "0.63", optional = true }
 libc = "0.2"
-linked_list_c = { path = "../linked_list" } 
+linked_list_c = {path = "../linked_list"}
 clap = { version = "4.0", features = ["derive"], optional = true}
 log = "0.4"
 

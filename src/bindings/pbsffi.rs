@@ -2664,19 +2664,22 @@ pub const mgr_obj_MGR_OBJ_PBS_HOOK: mgr_obj = 9;
 pub const mgr_obj_MGR_OBJ_LAST: mgr_obj = 10;
 #[doc = " Add new MGR_OBJs before MGR_OBJ_LAST"]
 pub type mgr_obj = ::std::os::raw::c_int;
-pub const batch_op_SET: batch_op = 0;
-pub const batch_op_UNSET: batch_op = 1;
-pub const batch_op_INCR: batch_op = 2;
-pub const batch_op_DECR: batch_op = 3;
-pub const batch_op_EQ: batch_op = 4;
-pub const batch_op_NE: batch_op = 5;
-pub const batch_op_GE: batch_op = 6;
-pub const batch_op_GT: batch_op = 7;
-pub const batch_op_LE: batch_op = 8;
-pub const batch_op_LT: batch_op = 9;
-pub const batch_op_DFLT: batch_op = 10;
+#[repr(u32)]
 #[doc = " the pair to this list is in module_pbs_v1.c and must be updated to reflect any changes"]
-pub type batch_op = ::std::os::raw::c_uint;
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+pub enum batch_op {
+    SET = 0,
+    UNSET = 1,
+    INCR = 2,
+    DECR = 3,
+    EQ = 4,
+    NE = 5,
+    GE = 6,
+    GT = 7,
+    LE = 8,
+    LT = 9,
+    DFLT = 10,
+}
 #[doc = " This structure is identical to attropl so they can be used\n interchangably.  The op field is not used."]
 #[repr(C)]
 #[derive(Debug)]
