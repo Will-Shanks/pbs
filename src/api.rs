@@ -1,6 +1,6 @@
 use linked_list_c::List;
 use log::{trace,warn,error};
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::ffi::{CStr,CString};
 use std::ptr::null_mut;
 
@@ -136,6 +136,14 @@ impl Attrl<'_> {
         let r = attrib.next();
         (n, r)
     }
+    //todo return a &str instead
+    pub fn fullname(&self) -> String {
+        if let Some(r) = self.resource {
+            format!("{}.{}", self.name, r)
+        } else {
+            self.name.to_string()
+        }
+    }
     pub fn name(&self) -> &str {
         self.name
     }
@@ -144,6 +152,9 @@ impl Attrl<'_> {
     }
     pub fn value(&self) -> &str {
         self.value
+    }
+    pub fn op(&self) -> bindings::batch_op {
+        self.op.clone()
     }
 }
 
@@ -159,7 +170,7 @@ impl Status<'_> {
             x.into()
         })
     }
-    pub fn attribs(&self) -> HashMap<String, String> {
+    pub fn attribs(&self) -> BTreeMap<String, String> {
         self.attribs_iter().map(|x| {
             let k = if let Some(r) = x.resource { format!("{}.{}", x.name, r) } else {x.name.to_owned()};
             let v = x.value.to_owned();

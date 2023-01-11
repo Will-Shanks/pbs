@@ -1,13 +1,11 @@
 [package]
 name = "pbs"
-version = "0.0.2"
+version = "0.0.3"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/Will-Shanks/pbs-rs"
 description = "Safe FFI for PBSPro HPC job scheduler"
 keywords = ["pbs", "hpc"]
-
-publish = false
 
 [dependencies]
 bindgen = { version = "0.63", optional = true }
