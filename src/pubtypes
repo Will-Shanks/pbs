@@ -3,11 +3,6 @@ use log::trace;
 use crate::helpers::cstr_to_str;
 use crate::bindings;
 
-#[derive(Debug)]
-pub struct Server {
-    pub(super)conn: std::os::raw::c_int
-}
-
 //TODO look at adding a T to Status to differentiate what it is a status of
 #[derive(Debug)]
 pub struct Status<'a> {
@@ -37,11 +32,6 @@ pub enum Resource {
     Scheduler,
     Server,
     Vnode,
-}
-
-
-impl Default for Server {
-    fn default() -> Self {Self::new()}
 }
 
 impl Default for Attrl<'_> {

@@ -3,23 +3,17 @@ use std::ptr::null_mut;
 use log::trace;
 
 use crate::helpers::{str_to_cstr, optstr_to_cstr};
-use crate::pubtypes::Attrl;
+use crate::types::Attrl;
 
-#[cfg(feature="bindgen")]
-mod ffi;
-#[cfg(not(feature="bindgen"))]
-mod pbsffi;
-#[cfg(not(feature="bindgen"))]
-use pbsffi as ffi;
+use pbs_sys as ffi;
 
-linked_list_c::impl_LlItem!{[ffi::attrl, ffi::batch_status, ffi::attropl]}
-
-pub use ffi::{attrl,batch_status,attropl,batch_op,pbs_connect,pbs_disconnect,pbs_submit};
+//linked_list_c::impl_LlItem!{[ffi::attrl, ffi::batch_status, ffi::attropl]}
 
 pub mod stat{
     pub use super::ffi::{pbs_stathost,pbs_statresv,pbs_statrsc,pbs_statvnode,pbs_statque,pbs_selstat,pbs_statfree,pbs_statsched,pbs_statserver};
 }
  
+/*
 // struct used in job/resv submission
 impl ffi::attrl {
     fn new(name: &str, value: &str, resource: Option<&str>, op: ffi::batch_op) -> Self {
@@ -48,7 +42,9 @@ impl From<Attrl<'_>> for ffi::attrl {
         new
     }
 }
+*/
 
+/*
 impl ffi::batch_op {
     pub(crate) fn from_str(input: &str) -> ffi::batch_op {
         if input.contains("!=") {ffi::batch_op::NE}
@@ -72,7 +68,9 @@ impl ffi::batch_op {
         }
     }
 }
+*/
 
+/*
 impl Drop for ffi::attropl {
     fn drop(&mut self) {
         let _ = unsafe{CString::from_raw(self.name)};
@@ -98,7 +96,7 @@ impl Drop for ffi::batch_status {
         unsafe{ffi::pbs_statfree(&mut *self)};
     }
 }
-
+*/
 pub fn is_err() -> bool {
     unsafe{*ffi::__pbs_errno_location() != 0}
 }

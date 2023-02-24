@@ -1,8 +1,7 @@
-mod pubtypes;
+mod types;
 mod helpers;
 mod bindings;
 mod api;
 
-pub use pubtypes::{Attrl, Resource, Server, Status};
-pub use bindings::batch_op;
+pub use types::{Attrl, Attribs, Resource, Server, Status, StatResp, Op};
 
