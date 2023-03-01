@@ -47,4 +47,35 @@ impl Op {
             Op::Default(x) => x.to_string(),
         }
     }
+    pub(crate) fn apply_filter(&self, filter: &Op) -> bool {
+        match filter {
+            Op::Set(_) => true, // pretend its Op::Default
+            Op::Unset(_) => panic!("filter shouldn't be an unset op"),
+            Op::Incr(_) => panic!("filter shouldn't be an incr op"),
+            Op::Decr(_) => panic!("filter shouldn't be an decr op"),
+            Op::Equal(x) => x.eq(&self.val()),
+            Op::NotEqual(x) => !x.eq(&self.val()),
+            Op::GreaterThan(_) => todo!(),
+            Op::LessThan(_) => todo!(),
+            Op::EqualOrGreaterThan(_) => todo!(),
+            Op::EqualOrLessThan(_) => todo!(),
+            Op::Default(_) => true, // filtering on value existing
+        }
+    }
+    pub(crate) fn new(val: Option<String>, op: Option<&str>) -> Op {
+        if val.is_none() { return Op::Default("".to_string()) };
+        let val = val.unwrap();
+        if op.is_none() { return Op::Default(val) };
+        let op = op.unwrap();
+        //TODO figure out how to handle Set and Equal differently
+        match op {
+            "=" => Op::Equal(val),
+            "!=" => Op::NotEqual(val),
+            "<" => Op::LessThan(val),
+            ">" => Op::EqualOrGreaterThan(val),
+            "<=" => Op::EqualOrLessThan(val),
+            ">=" => Op::GreaterThan(val),
+            _ => panic!("invalid op: {}", op),
+        }
+    }
 }

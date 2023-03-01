@@ -1,11 +1,11 @@
-use log::{info,trace,error};
+use log::{trace,error};
 use std::collections::BTreeMap;
 use linked_list_c::{ConstList,List};
 use pbs_sys::attrl;
 use crate::helpers;
 use std::ptr;
 
-use crate::types::{Op,Status,Resource};
+use crate::types::Op;
 
 #[cfg(feature="regex")]
 use regex::Regex;
@@ -15,6 +15,32 @@ use regex::Regex;
 pub enum Attrl {
     Value(Op),
     Resource(BTreeMap<String, Op>),
+}
+
+impl Attrl {
+    fn apply_filter(&self, filter: &Attrl) -> bool {
+        match self {
+            Attrl::Value(x) => {
+                if let Attrl::Value(f) = filter {x.apply_filter(f)}
+                else {false}
+            },
+            Self::Resource(map) => {
+                if let Self::Resource(f) = filter {
+                    for (k, v) in f {
+                        if let Some(val) = map.get(k) {
+                            if !val.apply_filter(v) { return false;}
+                        }
+                    }
+                    true
+                }
+                else {
+                    //only checking resource is in attribs
+                    true
+                }
+            },
+                
+        }
+    }
 }
 
 /// PBS resource attributes
@@ -55,14 +81,21 @@ impl Attribs {
         };
     }
 
-    // check if Status is within spec of all of selfs Ops
-    fn filter(&self, other: &Status) -> bool {
-        for (key, value) in &self.attribs {
-            match value {
-                _ => todo!(),
+    fn get(&self, key: &str) -> Option<&Attrl> {
+        self.attribs.get(key)
+    }
+
+    // check if self is within spec of provided filter
+    pub fn check_filter(&self, filter: &Attribs) -> bool {
+        for (key, value) in &filter.attribs {
+            if let Some(v) = self.get(key) {
+                if !v.apply_filter(value) {
+                    return false;
+                }
+            } else {
+                return false;
             }
         }
-        todo!();
         true
     }
 }
@@ -88,8 +121,8 @@ impl From<ConstList<'_, attrl>> for Attribs {
         trace!("Converting ConstList<attrl> to Attribs");
         let mut attribs = Attribs::new();
         for a in l {
-            let name = helpers::cstr_to_str(unsafe{(*a).name});
-            attribs.add(name.to_string(), unsafe{(&*a).into()});
+            let name = helpers::cstr_to_str(a.name);
+            attribs.add(name.to_string(), a.into());
         }
         trace!("Converted to Attribs");
         attribs
@@ -101,10 +134,10 @@ impl From<Attribs> for ConstList<'_, attrl> {
         let mut list = List::new();
         for (name, val) in attribs.attribs.iter() {
             match val {
-                Attrl::Value(v) => list.add(&mut attrl{name:helpers::str_to_cstr(&name), value:helpers::str_to_cstr(&v.val()), resource:ptr::null_mut(), op: v.op(), next: ptr::null_mut()}),
+                Attrl::Value(v) => list.add(&mut attrl{name:helpers::str_to_cstr(name), value:helpers::str_to_cstr(&v.val()), resource:ptr::null_mut(), op: v.op(), next: ptr::null_mut()}),
                 Attrl::Resource(map) => {
                     for (r, v) in map.iter(){
-                        list.add(&mut attrl{name:helpers::str_to_cstr(&name), value:helpers::str_to_cstr(&v.val()), resource:helpers::str_to_cstr(&r), op: v.op(), next: ptr::null_mut()});
+                        list.add(&mut attrl{name:helpers::str_to_cstr(name), value:helpers::str_to_cstr(&v.val()), resource:helpers::str_to_cstr(r), op: v.op(), next: ptr::null_mut()});
                     }
                 }
             };
@@ -117,11 +150,22 @@ impl From<Attribs> for ConstList<'_, attrl> {
 impl From<&Vec<String>> for Attribs {
     fn from(a: &Vec<String>) -> Attribs {
         let mut attribs = Attribs::new();
-        let re = Regex::new(r"^(\w+)(/.\w+)?([<>=!]{1,2})?(\w+)?$").unwrap();
+        let re = Regex::new(r"^(\w+)(\.\w+)?(=|!=|>=|<=|<|>)?(\w+)?$").unwrap();
         for s in a {
-            let vals = re.captures(&s).unwrap();
-            info!("name: {}, resource: {}, comparison: {}, val: {}", &vals[1],&vals[2],&vals[3],&vals[4]);
-            //TODO match on resource and make an Attrl then add it to attribs
+            if let Some(vals) = re.captures(s){
+                let name = vals.get(1).unwrap().as_str().to_string();
+                let v = vals.get(4).map(|x| x.as_str().to_string());
+                let comp = vals.get(3).map(|x| x.as_str());
+                let op = Op::new(v, comp);
+                if let Some(r) = vals.get(2) {
+                    let mut map = BTreeMap::new();
+                    //drop '.' from resource match
+                    map.insert(r.as_str()[1..].to_string(), op);
+                    attribs.add(name, Attrl::Resource(map));
+                }else{
+                    attribs.add(name, Attrl::Value(op));
+                }
+            }
         }
         attribs
     }

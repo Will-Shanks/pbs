@@ -1,9 +1,4 @@
-use std::ffi::{CStr, CString};
-use std::ptr::null_mut;
-use log::trace;
-
-use crate::helpers::{str_to_cstr, optstr_to_cstr};
-use crate::types::Attrl;
+use std::ffi::CStr;
 
 use pbs_sys as ffi;
 

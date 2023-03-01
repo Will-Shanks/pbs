@@ -1,7 +1,6 @@
 use log::trace;
 use std::ptr;
 use std::ffi::CString;
-use pbs_sys;
 use crate::bindings;
 
 
@@ -25,7 +24,7 @@ impl Server {
         let server = CString::new(srv.to_string()).unwrap();
         match unsafe{pbs_sys::pbs_connect(server.as_ptr() as *mut i8)} {
             -1 => Err(bindings::get_err()),
-            x => Ok(Server{conn: x.into()}),
+            x => Ok(Server{conn: x}),
         }
     }
     pub(crate) fn conn(&self) -> std::os::raw::c_int {

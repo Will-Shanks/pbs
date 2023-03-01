@@ -1,13 +1,12 @@
-use linked_list_c::{ConstList,CustomList};
-use log::{trace,warn,error};
-use std::collections::BTreeMap;
-use std::ffi::{CStr,CString};
+use linked_list_c::ConstList;
+use log::{trace,error};
+use std::ffi::CString;
 use std::ptr::null_mut;
 use pbs_sys::{attrl, attropl, batch_status};
 
-use crate::bindings::{self,is_err,get_err,stat};
-use crate::helpers::{optstr_to_cstr,str_to_cstr};
-use crate::types::{Attrl,Attribs,Status,StatResp,Server};
+use crate::bindings::{is_err,get_err,stat};
+use crate::helpers::optstr_to_cstr;
+use crate::types::{Attribs,StatResp,Server};
 
 
 // signature for most of the pbs_stat* functions
