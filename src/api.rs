@@ -20,43 +20,44 @@ unsafe extern fn srv_stat(conn: i32, n: *mut i8, a: *mut attrl, _ex: *mut i8) ->
     stat::pbs_statserver(conn, a, n)
 }
 impl Server {
-    pub fn stat_host(&self, name: &Option<String>, info: Attribs) -> Result<StatResp, String> {
+    pub fn stat_host(&self, name: &Option<String>, info: Option<Attribs>) -> Result<StatResp, String> {
         trace!("performing a host stat");
         self.stat(name, info, stat::pbs_stathost)
     }
-    pub fn stat_reservation(&self, name: &Option<String>, info: Attribs) -> Result<StatResp, String> {
+    pub fn stat_reservation(&self, name: &Option<String>, info: Option<Attribs>) -> Result<StatResp, String> {
         trace!("performing a reservation stat");
         self.stat(name, info, stat::pbs_statresv)
     }
-    pub fn stat_resource(&self, name: &Option<String>, info: Attribs) -> Result<StatResp, String> {
+    pub fn stat_resource(&self, name: &Option<String>, info: Option<Attribs>) -> Result<StatResp, String> {
         trace!("performing a resource stat");
         self.stat(name, info, stat::pbs_statrsc)
     }
-    pub fn stat_vnode(&self, name: &Option<String>, info: Attribs) -> Result<StatResp, String> {
+    pub fn stat_vnode(&self, name: &Option<String>, info: Option<Attribs>) -> Result<StatResp, String> {
         trace!("performing a vnode stat");
         self.stat(name, info, stat::pbs_statvnode)
     }
-    pub fn stat_que(&self, name: &Option<String>, info: Attribs) -> Result<StatResp, String> {
+    pub fn stat_que(&self, name: &Option<String>, info: Option<Attribs>) -> Result<StatResp, String> {
         trace!("performing a que stat");
         self.stat(name, info, stat::pbs_statque)
     }
-     pub fn stat_scheduler(&self, name: &Option<String>, info: Attribs) -> Result<StatResp, String> {
+    pub fn stat_scheduler(&self, name: &Option<String>, info: Option<Attribs>) -> Result<StatResp, String> {
         trace!("performing a scheduler stat");
         self.stat(name, info, sched_stat)
     }
-    pub fn stat_server(&self, name: &Option<String>, info: Attribs) -> Result<StatResp, String> {
+    pub fn stat_server(&self, name: &Option<String>, info: Option<Attribs>) -> Result<StatResp, String> {
         trace!("performing a server stat");
         self.stat(name, info, srv_stat)
     }
-    pub fn stat_job(&self, criteria: Attribs, output: Attribs) -> Result<StatResp, String> {
+    pub fn stat_job(&self, criteria: Attribs, _output: Option<Attribs>) -> Result<StatResp, String> {
         trace!("performing a job stat");
         let crit: ConstList<attrl> = criteria.into();
-        let out: ConstList<attrl> = output.into();
+        //TODO send criteria to api
+        //let out: ConstList<attrl> = output.unwrap().into();
         //todo send extend flags
         // T, t to include subjobs, job arrays are not included
         // x include finished and moved jobs
         trace!("calling pbs server");
-        let data = unsafe{stat::pbs_selstat(self.conn(), crit.head() as *mut attropl, out.head(), null_mut())};
+        let data = unsafe{stat::pbs_selstat(self.conn(), crit.head() as *mut attropl, null_mut(), null_mut())};
         if data.is_null() && is_err() {
             error!("job stat request failed {}", get_err());
             Err(get_err())
@@ -66,12 +67,13 @@ impl Server {
         }
     }
  
-    fn stat(&self, name: &Option<String>, info: Attribs, api: PbsStatSignature) -> Result<StatResp,String> {
-        let a: ConstList<attrl> = info.into();
+    fn stat(&self, name: &Option<String>, _info: Option<Attribs>, api: PbsStatSignature) -> Result<StatResp,String> {
+        //FIXME send constraints to api
+        //let a: ConstList<attrl> = info.unwrap().into();
         let n_ptr = optstr_to_cstr(name.as_deref());
         let data = {
             trace!("Performing stat");
-            let resp = unsafe{api(self.conn(), n_ptr, a.head(), null_mut())};
+            let resp = unsafe{api(self.conn(), n_ptr, null_mut(), null_mut())};
             if !n_ptr.is_null() {
                 trace!("dropping n_ptr");
                 _ = unsafe{CString::from_raw(n_ptr)};

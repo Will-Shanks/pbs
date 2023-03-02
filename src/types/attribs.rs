@@ -1,9 +1,12 @@
-use log::{trace,error};
-use std::collections::BTreeMap;
-use linked_list_c::{ConstList,List};
-use pbs_sys::attrl;
 use crate::helpers;
+use linked_list_c::{ConstList,List};
+use log::{trace,error};
+use pbs_sys::attrl;
+use std::collections::BTreeMap;
+use std::fmt;
 use std::ptr;
+use std::collections::HashMap;
+use serde_json::{self,Value};
 
 use crate::types::Op;
 
@@ -98,6 +101,43 @@ impl Attribs {
         }
         true
     }
+    pub fn json(&self) -> Value {
+        let mut attribs = HashMap::new();
+        for (name, val) in &self.attribs {
+            match val {
+                Attrl::Value(x) => {attribs.insert(name.to_string(), json_val(x.val()));},
+                Attrl::Resource(map) => {
+                    for (r,v) in map {
+                        attribs.insert(format!("{}.{}", name, r), json_val(v.val()));
+                    }
+                },
+            }
+        }
+        serde_json::to_value(attribs).unwrap()
+    }
+}
+
+fn json_val(val: String) -> Value {
+    if let Ok(num) = val.parse() {
+        return Value::Number(num)
+    } else if val.ends_with("gb") {
+        if let Ok(num) = val[..val.len()-2].parse::<isize>() {
+            return Value::Number((num*1000).into());
+        }
+    } else if val.ends_with("mb") {
+        if let Ok(num) = val[..val.len()-2].parse::<isize>() {
+            return Value::Number(num.into());
+        }
+    } else if val.ends_with("kb") {
+        if let Ok(num) = val[..val.len()-2].parse::<isize>() {
+            return Value::Number((num/1000).into());
+        }
+    } else if val.ends_with("b") {
+        if let Ok(num) = val[..val.len()-1].parse::<isize>() {
+            return Value::Number((num/1000000).into());
+        }
+    }
+    Value::String(val)
 }
 
 
@@ -168,5 +208,21 @@ impl From<&Vec<String>> for Attribs {
             }
         }
         attribs
+    }
+}
+
+impl fmt::Display for Attribs {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for (name, val) in &self.attribs {
+            match val {
+                Attrl::Value(x) => write!(f, "\t{}: {}\n", name, x.val())?,
+                Attrl::Resource(map) => {
+                    for (r,v) in map {
+                        write!(f, "\t{}.{}: {}\n", name, r, v.val())?
+                    }
+                },
+            }
+        }
+        Ok(())
     }
 }
