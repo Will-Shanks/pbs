@@ -1,5 +1,5 @@
 use crate::helpers;
-use linked_list_c::{ConstList,List};
+use linked_list_c::{CustomList,ConstList,List};
 use log::{trace,error};
 use pbs_sys::attrl;
 use std::collections::BTreeMap;
@@ -120,6 +120,10 @@ impl Attribs {
 fn json_val(val: String) -> Value {
     if let Ok(num) = val.parse() {
         return Value::Number(num)
+    } else if val.ends_with("tb") {
+        if let Ok(num) = val[..val.len()-2].parse::<isize>() {
+            return Value::Number((num*1000000).into());
+        }
     } else if val.ends_with("gb") {
         if let Ok(num) = val[..val.len()-2].parse::<isize>() {
             return Value::Number((num*1000).into());
@@ -160,8 +164,11 @@ impl From<ConstList<'_, attrl>> for Attribs {
     fn from(l: ConstList<attrl>) -> Attribs {
         trace!("Converting ConstList<attrl> to Attribs");
         let mut attribs = Attribs::new();
+        let a = l.head();
         for a in l {
+            trace!("adding elem {:?}", a);
             let name = helpers::cstr_to_str(a.name);
+            trace!("name: {name}");
             attribs.add(name.to_string(), a.into());
         }
         trace!("Converted to Attribs");
@@ -171,17 +178,27 @@ impl From<ConstList<'_, attrl>> for Attribs {
 
 impl From<Attribs> for ConstList<'_, attrl> {
     fn from(attribs: Attribs) -> ConstList<'static, attrl> {
-        let mut list = List::new();
+        trace!("Converting Attribs to ConstList<attrl>");
+        let mut list: CustomList<attrl> = unsafe{CustomList::from(ptr::null_mut(), |x| {Box::from_raw(x);})};
         for (name, val) in attribs.attribs.iter() {
             match val {
-                Attrl::Value(v) => list.add(&mut attrl{name:helpers::str_to_cstr(name), value:helpers::str_to_cstr(&v.val()), resource:ptr::null_mut(), op: v.op(), next: ptr::null_mut()}),
+                Attrl::Value(v) => {
+                    trace!("Adding {name} {val:?}");
+                        //TODO FIXME into_raw leaks memory, need to have an associated from_raw to clean up
+                    let mut at = Box::into_raw(Box::new(attrl{name:helpers::str_to_cstr(name), value:helpers::str_to_cstr(&v.val()), resource:ptr::null_mut(), op: v.op(), next: ptr::null_mut()}));
+                list.add(at);
+                 },
+
                 Attrl::Resource(map) => {
                     for (r, v) in map.iter(){
-                        list.add(&mut attrl{name:helpers::str_to_cstr(name), value:helpers::str_to_cstr(&v.val()), resource:helpers::str_to_cstr(r), op: v.op(), next: ptr::null_mut()});
+                        trace!("Adding {name}.{r} {v:?}");
+                        //TODO FIXME into_raw leaks memory, need to have an associated from_raw to clean up
+                        list.add(Box::into_raw(Box::new(attrl{name:helpers::str_to_cstr(name), value:helpers::str_to_cstr(&v.val()), resource:helpers::str_to_cstr(r), op: v.op(), next: ptr::null_mut()})));
                     }
                 }
             };
         }
+        trace!("Converted Attribs to ConstList<attrl>");
         list.into()
     }
 }
@@ -190,7 +207,7 @@ impl From<Attribs> for ConstList<'_, attrl> {
 impl From<&Vec<String>> for Attribs {
     fn from(a: &Vec<String>) -> Attribs {
         let mut attribs = Attribs::new();
-        let re = Regex::new(r"^(\w+)(\.\w+)?(=|!=|>=|<=|<|>)?(\w+)?$").unwrap();
+        let re = Regex::new(r"^(\w+)(\.\w+)?(=|!=|>=|<=|<|>)?(.*)?$").unwrap();
         for s in a {
             if let Some(vals) = re.captures(s){
                 let name = vals.get(1).unwrap().as_str().to_string();
@@ -207,6 +224,7 @@ impl From<&Vec<String>> for Attribs {
                 }
             }
         }
+        trace!("attribs: {attribs:?}");
         attribs
     }
 }

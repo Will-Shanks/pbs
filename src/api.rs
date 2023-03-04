@@ -1,11 +1,11 @@
 use linked_list_c::ConstList;
-use log::{trace,error};
-use std::ffi::CString;
+use log::{trace,warn,error};
+use std::ffi::{CString,CStr};
 use std::ptr::null_mut;
 use pbs_sys::{attrl, attropl, batch_status};
 
 use crate::bindings::{is_err,get_err,stat};
-use crate::helpers::optstr_to_cstr;
+use crate::helpers::{self,optstr_to_cstr};
 use crate::types::{Attribs,StatResp,Server};
 
 
@@ -90,14 +90,19 @@ impl Server {
         Ok(data.into())
     }
 
-    /*
     pub fn submit(&self, attributes: Attribs, script: &str, queue: &str) -> Result<String, String> {
         trace!("Job submission, generating attributes list");
-        let attribs: List<bindings::attrl> = attributes.into();
+        let attribs: ConstList<pbs_sys::attrl> = attributes.into();
         //bindings::attropl and bindings::attrl are interchangable
         trace!("Submitting job request");
-        let jobid = unsafe{bindings::pbs_submit(self.conn(), attribs.head() as *mut bindings::attropl, str_to_cstr(script), str_to_cstr(queue), null_mut())};
-        trace!("Submitted, resp at {:?}", &jobid);
+        //let srv = self.conn();
+        //let at = attribs.head() as *mut pbs_sys::attropl;
+        //let s = helpers::str_to_cstr(script);
+        //let q = helpers::str_to_cstr(queue);
+        trace!("foo");
+        //let jobid = unsafe{pbs_sys::pbs_submit(srv,at,s,q,null_mut())};
+        trace!("bar");
+        let jobid = unsafe{pbs_sys::pbs_submit(self.conn(), attribs.head() as *mut pbs_sys::attropl, helpers::str_to_cstr(script), helpers::str_to_cstr(queue), null_mut())};
         if !jobid.is_null() {
             let resp = Ok(unsafe{CStr::from_ptr(jobid)}.to_str().unwrap().to_string());
             trace!("Job submitted, got resp {:?}", &resp);
@@ -108,6 +113,5 @@ impl Server {
             Err(get_err())
         }
     }
-    */
 }
 
