@@ -1,5 +1,5 @@
 use linked_list_c::ConstList;
-use log::{trace,warn,error};
+use log::{trace,info,warn,error};
 use std::ffi::{CString,CStr};
 use std::ptr::null_mut;
 use pbs_sys::{attrl, attropl, batch_status};
@@ -112,6 +112,15 @@ impl Server {
             warn!("Error submitting job {}", get_err());
             Err(get_err())
         }
+    }
+    pub fn del_job(&self, jobid: &str, msg: Option<&str>) -> Result<(), String> {
+        trace!("Deleting job {jobid}");
+        let resp = unsafe{pbs_sys::pbs_deljob(self.conn(), helpers::str_to_cstr(jobid), helpers::optstr_to_cstr(msg))};
+        if resp != 0 {
+            info!("Error deleting job {jobid}: {}", get_err());
+            return Err(get_err());
+        }
+        Ok(())
     }
 }
 

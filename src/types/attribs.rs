@@ -207,6 +207,7 @@ impl From<Attribs> for ConstList<'_, attrl> {
 impl From<&Vec<String>> for Attribs {
     fn from(a: &Vec<String>) -> Attribs {
         let mut attribs = Attribs::new();
+        // value should usually be \w+, but selects are way more complicated
         let re = Regex::new(r"^(\w+)(\.\w+)?(=|!=|>=|<=|<|>)?(.*)?$").unwrap();
         for s in a {
             if let Some(vals) = re.captures(s){
