@@ -1,7 +1,7 @@
 use linked_list_c::ConstList;
 use log::{trace,info,warn,error};
 use std::ffi::{CString,CStr};
-use std::ptr::null_mut;
+use std::ptr::{self,null_mut};
 use pbs_sys::{attrl, attropl, batch_status};
 
 use crate::bindings::{is_err,get_err,stat};
@@ -89,7 +89,7 @@ impl Server {
         Ok(data.into())
     }
 
-    pub fn submit(&self, attributes: Attribs, script: &str, queue: &str) -> Result<String, String> {
+    pub fn submit_job(&self, attributes: Attribs, script: &str, queue: &str) -> Result<String, String> {
         trace!("Job submission, generating attributes list");
         let attribs: ConstList<pbs_sys::attrl> = attributes.into();
         //bindings::attropl and bindings::attrl are interchangable
@@ -105,11 +105,55 @@ impl Server {
             Err(get_err())
         }
     }
-    pub fn del_job(&self, jobid: &str, msg: Option<&str>) -> Result<(), String> {
+
+    pub fn submit_resv(&self, attributes: Attribs) -> Result<String, String> {
+        trace!("Reservation submission, generating attributes list");
+        let attribs: ConstList<pbs_sys::attrl> = attributes.into();
+        //bindings::attropl and bindings::attrl are interchangable
+        trace!("Submitting reservation request");
+        let resvid = unsafe{pbs_sys::pbs_submit_resv(self.conn(), attribs.head() as *mut pbs_sys::attropl, ptr::null_mut())};
+        if !resvid.is_null() {
+            let resp = Ok(unsafe{CStr::from_ptr(resvid)}.to_str().unwrap().to_string());
+            trace!("Reservation submitted, got resp {:?}", &resp);
+            unsafe{libc::free(resvid as *mut libc::c_void)};
+            resp
+        } else {
+            warn!("Error submitting reservation {}", get_err());
+            Err(get_err())
+        }
+    }
+
+    pub fn mod_resv(&self, resv: &str, attributes: Attribs) -> Result<String, String> {
+        trace!("Modify reservation submission, generating attributes list");
+        let attribs: ConstList<pbs_sys::attrl> = attributes.into();
+        //bindings::attropl and bindings::attrl are interchangable
+        trace!("Submitting reservation modification request");
+        let resvid = unsafe{pbs_sys::pbs_modify_resv(self.conn(), helpers::str_to_cstr(resv), attribs.head() as *mut pbs_sys::attropl, ptr::null_mut())};
+        if !resvid.is_null() {
+            let resp = Ok(unsafe{CStr::from_ptr(resvid)}.to_str().unwrap().to_string());
+            trace!("Reservation modification submitted, got resp {:?}", &resp);
+            unsafe{libc::free(resvid as *mut libc::c_void)};
+            resp
+        } else {
+            warn!("Error submitting reservation modification {}", get_err());
+            Err(get_err())
+        }
+    }
+
+    pub fn del_job(&self, jobid: &str) -> Result<(), String> {
         trace!("Deleting job {jobid}");
-        let resp = unsafe{pbs_sys::pbs_deljob(self.conn(), helpers::str_to_cstr(jobid), helpers::optstr_to_cstr(msg))};
+        let resp = unsafe{pbs_sys::pbs_deljob(self.conn(), helpers::str_to_cstr(jobid), ptr::null_mut())};
         if resp != 0 {
             info!("Error deleting job {jobid}: {}", get_err());
+            return Err(get_err());
+        }
+        Ok(())
+    }
+    pub fn del_resv(&self, id: &str) -> Result<(), String> {
+        trace!("Deleting Reservation {id}");
+        let resp = unsafe{pbs_sys::pbs_delresv(self.conn(), helpers::str_to_cstr(id),ptr::null_mut())};
+        if resp != 0 {
+            info!("Error deleting Reservation {id}: {}", get_err());
             return Err(get_err());
         }
         Ok(())
