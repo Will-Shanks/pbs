@@ -69,7 +69,6 @@ impl Server {
  
     fn stat(&self, name: &Option<String>, _info: Option<Attribs>, api: PbsStatSignature) -> Result<StatResp,String> {
         //FIXME send constraints to api
-        //let a: ConstList<attrl> = info.unwrap().into();
         let n_ptr = optstr_to_cstr(name.as_deref());
         let data = {
             trace!("Performing stat");
@@ -95,13 +94,6 @@ impl Server {
         let attribs: ConstList<pbs_sys::attrl> = attributes.into();
         //bindings::attropl and bindings::attrl are interchangable
         trace!("Submitting job request");
-        //let srv = self.conn();
-        //let at = attribs.head() as *mut pbs_sys::attropl;
-        //let s = helpers::str_to_cstr(script);
-        //let q = helpers::str_to_cstr(queue);
-        trace!("foo");
-        //let jobid = unsafe{pbs_sys::pbs_submit(srv,at,s,q,null_mut())};
-        trace!("bar");
         let jobid = unsafe{pbs_sys::pbs_submit(self.conn(), attribs.head() as *mut pbs_sys::attropl, helpers::str_to_cstr(script), helpers::str_to_cstr(queue), null_mut())};
         if !jobid.is_null() {
             let resp = Ok(unsafe{CStr::from_ptr(jobid)}.to_str().unwrap().to_string());

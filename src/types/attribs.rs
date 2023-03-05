@@ -1,17 +1,16 @@
 use crate::helpers;
-use linked_list_c::{CustomList,ConstList,List};
+use linked_list_c::{CustomList,ConstList};
 use log::{trace,error};
 use pbs_sys::attrl;
+use regex::Regex;
+use serde_json::{self,Value};
 use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::fmt;
 use std::ptr;
-use std::collections::HashMap;
-use serde_json::{self,Value};
 
 use crate::types::Op;
 
-#[cfg(feature="regex")]
-use regex::Regex;
 
 
 #[derive(Debug)]
@@ -136,7 +135,7 @@ fn json_val(val: String) -> Value {
         if let Ok(num) = val[..val.len()-2].parse::<isize>() {
             return Value::Number((num/1000).into());
         }
-    } else if val.ends_with("b") {
+    } else if val.ends_with('b') {
         if let Ok(num) = val[..val.len()-1].parse::<isize>() {
             return Value::Number((num/1000000).into());
         }
@@ -164,7 +163,6 @@ impl From<ConstList<'_, attrl>> for Attribs {
     fn from(l: ConstList<attrl>) -> Attribs {
         trace!("Converting ConstList<attrl> to Attribs");
         let mut attribs = Attribs::new();
-        let a = l.head();
         for a in l {
             trace!("adding elem {:?}", a);
             let name = helpers::cstr_to_str(a.name);
@@ -179,13 +177,13 @@ impl From<ConstList<'_, attrl>> for Attribs {
 impl From<Attribs> for ConstList<'_, attrl> {
     fn from(attribs: Attribs) -> ConstList<'static, attrl> {
         trace!("Converting Attribs to ConstList<attrl>");
-        let mut list: CustomList<attrl> = unsafe{CustomList::from(ptr::null_mut(), |x| {Box::from_raw(x);})};
+        let mut list: CustomList<attrl> = unsafe{CustomList::from(ptr::null_mut(), |x| {_ = Box::from_raw(x);})};
         for (name, val) in attribs.attribs.iter() {
             match val {
                 Attrl::Value(v) => {
                     trace!("Adding {name} {val:?}");
                         //TODO FIXME into_raw leaks memory, need to have an associated from_raw to clean up
-                    let mut at = Box::into_raw(Box::new(attrl{name:helpers::str_to_cstr(name), value:helpers::str_to_cstr(&v.val()), resource:ptr::null_mut(), op: v.op(), next: ptr::null_mut()}));
+                    let at = Box::into_raw(Box::new(attrl{name:helpers::str_to_cstr(name), value:helpers::str_to_cstr(&v.val()), resource:ptr::null_mut(), op: v.op(), next: ptr::null_mut()}));
                 list.add(at);
                  },
 
@@ -203,7 +201,6 @@ impl From<Attribs> for ConstList<'_, attrl> {
     }
 }
 
-#[cfg(feature="regex")]
 impl From<&Vec<String>> for Attribs {
     fn from(a: &Vec<String>) -> Attribs {
         let mut attribs = Attribs::new();
@@ -234,10 +231,10 @@ impl fmt::Display for Attribs {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for (name, val) in &self.attribs {
             match val {
-                Attrl::Value(x) => write!(f, "\t{}: {}\n", name, x.val())?,
+                Attrl::Value(x) => writeln!(f, "\t{}: {}", name, x.val())?,
                 Attrl::Resource(map) => {
                     for (r,v) in map {
-                        write!(f, "\t{}.{}: {}\n", name, r, v.val())?
+                        writeln!(f, "\t{}.{}: {}", name, r, v.val())?
                     }
                 },
             }

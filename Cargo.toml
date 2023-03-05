@@ -1,6 +1,6 @@
 [package]
 name = "pbs"
-version = "0.0.3"
+version = "0.0.4"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/Will-Shanks/pbs-rs"
@@ -8,10 +8,9 @@ description = "Safe FFI for OpenPBS and PBSPro HPC job scheduler"
 keywords = ["pbs", "hpc"]
 
 [dependencies]
-pbs-sys = { path = "../pbs_sys", features=["static"] }
+pbs-sys = { version = "0.0.2", features=["static"] }
 libc = "0.2"
-linked_list_c = { path = "../linked_list_c-rs" }
-clap = { version = "4.0", features = ["derive"], optional = true}
+linked_list_c = "0.1.2"
 log = "0.4"
-regex = { version = "1", optional = true}
+regex = "1"
 serde_json = "1"
