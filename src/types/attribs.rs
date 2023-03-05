@@ -1,5 +1,6 @@
 use crate::helpers;
-use linked_list_c::{CustomList,ConstList};
+use crate::types::{Attrl,Op};
+use linked_list_c::ConstList;
 use log::{trace,error};
 use pbs_sys::attrl;
 use regex::Regex;
@@ -7,43 +8,6 @@ use serde_json::{self,Value};
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::fmt;
-use std::ptr;
-
-use crate::types::Op;
-
-
-
-#[derive(Debug)]
-pub enum Attrl {
-    Value(Op),
-    Resource(BTreeMap<String, Op>),
-}
-
-impl Attrl {
-    fn apply_filter(&self, filter: &Attrl) -> bool {
-        match self {
-            Attrl::Value(x) => {
-                if let Attrl::Value(f) = filter {x.apply_filter(f)}
-                else {false}
-            },
-            Self::Resource(map) => {
-                if let Self::Resource(f) = filter {
-                    for (k, v) in f {
-                        if let Some(val) = map.get(k) {
-                            if !val.apply_filter(v) { return false;}
-                        }
-                    }
-                    true
-                }
-                else {
-                    //only checking resource is in attribs
-                    true
-                }
-            },
-                
-        }
-    }
-}
 
 /// PBS resource attributes
 #[derive(Debug)]
@@ -54,6 +18,9 @@ pub struct Attribs {
 impl Attribs {
     fn new() -> Attribs {
         Attribs{attribs: BTreeMap::new()}
+    }
+    pub(crate) fn attribs(&self) -> &BTreeMap<String, Attrl> {
+        &self.attribs
     }
 
     fn add(&mut self, name: String, value: Attrl) {
@@ -103,58 +70,32 @@ impl Attribs {
     pub fn json(&self) -> Value {
         let mut attribs = HashMap::new();
         for (name, val) in &self.attribs {
+            //TODO convert que "state_count":"Transit:0 Queued:1 Held:0 Waiting:0 Running:0 Exiting:0 Begun:0 "
+            // to state_count.Transit:0, state_count.Queued: 1, etc
             match val {
-                Attrl::Value(x) => {attribs.insert(name.to_string(), json_val(x.val()));},
+                Attrl::Value(x) => {
+                    if name == "state_count" {
+                        let temp = x.val();
+                        let split = temp.split(' ');
+                        for s in split {
+                            if s=="" {break}
+                            let mut v = s.split(':');
+                            let state = v.next().unwrap();
+                            let num = v.next().unwrap();
+                            attribs.insert(format!("{}.{}", name, state), helpers::json_val(num.to_string()));
+                        }
+                    } else {
+                        attribs.insert(name.to_string(), helpers::json_val(x.val()));
+                    }
+                },
                 Attrl::Resource(map) => {
                     for (r,v) in map {
-                        attribs.insert(format!("{}.{}", name, r), json_val(v.val()));
+                        attribs.insert(format!("{}.{}", name, r), helpers::json_val(v.val()));
                     }
                 },
             }
         }
         serde_json::to_value(attribs).unwrap()
-    }
-}
-
-fn json_val(val: String) -> Value {
-    if let Ok(num) = val.parse() {
-        return Value::Number(num)
-    } else if val.ends_with("tb") {
-        if let Ok(num) = val[..val.len()-2].parse::<isize>() {
-            return Value::Number((num*1000000).into());
-        }
-    } else if val.ends_with("gb") {
-        if let Ok(num) = val[..val.len()-2].parse::<isize>() {
-            return Value::Number((num*1000).into());
-        }
-    } else if val.ends_with("mb") {
-        if let Ok(num) = val[..val.len()-2].parse::<isize>() {
-            return Value::Number(num.into());
-        }
-    } else if val.ends_with("kb") {
-        if let Ok(num) = val[..val.len()-2].parse::<isize>() {
-            return Value::Number((num/1000).into());
-        }
-    } else if val.ends_with('b') {
-        if let Ok(num) = val[..val.len()-1].parse::<isize>() {
-            return Value::Number((num/1000000).into());
-        }
-    }
-    Value::String(val)
-}
-
-
-impl From<&attrl> for Attrl {
-    fn from (a: &attrl) -> Attrl {
-        let value = Op::Default(helpers::cstr_to_str(a.value).to_string());
-        if a.resource.is_null() {
-            Attrl::Value(value)
-        } else {
-            let resource = helpers::cstr_to_str(a.resource).to_string();
-            let mut r = BTreeMap::new();
-            r.insert(resource, value);
-            Attrl::Resource(r)
-        }
     }
 }
 
@@ -171,33 +112,6 @@ impl From<ConstList<'_, attrl>> for Attribs {
         }
         trace!("Converted to Attribs");
         attribs
-    }
-}
-
-impl From<Attribs> for ConstList<'_, attrl> {
-    fn from(attribs: Attribs) -> ConstList<'static, attrl> {
-        trace!("Converting Attribs to ConstList<attrl>");
-        let mut list: CustomList<attrl> = unsafe{CustomList::from(ptr::null_mut(), |x| {_ = Box::from_raw(x);})};
-        for (name, val) in attribs.attribs.iter() {
-            match val {
-                Attrl::Value(v) => {
-                    trace!("Adding {name} {val:?}");
-                        //TODO FIXME into_raw leaks memory, need to have an associated from_raw to clean up
-                    let at = Box::into_raw(Box::new(attrl{name:helpers::str_to_cstr(name), value:helpers::str_to_cstr(&v.val()), resource:ptr::null_mut(), op: v.op(), next: ptr::null_mut()}));
-                list.add(at);
-                 },
-
-                Attrl::Resource(map) => {
-                    for (r, v) in map.iter(){
-                        trace!("Adding {name}.{r} {v:?}");
-                        //TODO FIXME into_raw leaks memory, need to have an associated from_raw to clean up
-                        list.add(Box::into_raw(Box::new(attrl{name:helpers::str_to_cstr(name), value:helpers::str_to_cstr(&v.val()), resource:helpers::str_to_cstr(r), op: v.op(), next: ptr::null_mut()})));
-                    }
-                }
-            };
-        }
-        trace!("Converted Attribs to ConstList<attrl>");
-        list.into()
     }
 }
 
