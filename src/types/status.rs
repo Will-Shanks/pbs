@@ -1,4 +1,4 @@
-use crate::types::Attribs;
+use crate::types::{Attribs,Attrl};
 
 /// Response to a resource stat request
 pub struct Status {
@@ -15,6 +15,9 @@ impl Status {
     }
     pub fn attribs(&self) -> &Attribs {
         &self.attribs
+    }
+    pub fn add(&mut self, k: String, v: Attrl) {
+        self.attribs.add(k, v);
     }
     pub(crate) fn new(name: String, text: Option<String>, attribs: Attribs) -> Status {
         Status{name, text, attribs}

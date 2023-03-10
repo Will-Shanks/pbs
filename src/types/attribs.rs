@@ -23,7 +23,7 @@ impl Attribs {
         &self.attribs
     }
 
-    fn add(&mut self, name: String, value: Attrl) {
+    pub(crate) fn add(&mut self, name: String, value: Attrl) {
         match self.attribs.get_mut(&name) {
             Some(Attrl::Value(old)) => {
                 if let Attrl::Value(_) = value {
@@ -50,7 +50,7 @@ impl Attribs {
         };
     }
 
-    fn get(&self, key: &str) -> Option<&Attrl> {
+    pub fn get(&self, key: &str) -> Option<&Attrl> {
         self.attribs.get(key)
     }
 
@@ -84,6 +84,8 @@ impl Attribs {
                             let num = v.next().unwrap();
                             attribs.insert(format!("{}.{}", name, state), helpers::json_val(num.to_string()));
                         }
+                    } else if name == "comment" {
+                        attribs.insert(name.to_string(), Value::String(x.val()));
                     } else {
                         attribs.insert(name.to_string(), helpers::json_val(x.val()));
                     }
