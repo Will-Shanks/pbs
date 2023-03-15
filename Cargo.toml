@@ -3,7 +3,7 @@ name = "pbs"
 version = "0.0.4"
 edition = "2021"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/Will-Shanks/pbs-rs"
+repository = "https://github.com/Will-Shanks/pbs"
 description = "Safe FFI for OpenPBS and PBSPro HPC job scheduler"
 keywords = ["pbs", "hpc"]
 
