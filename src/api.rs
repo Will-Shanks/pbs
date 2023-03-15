@@ -1,4 +1,4 @@
-use linked_list_c::ConstList;
+use linked_list_c::{ConstList,List};
 use log::{trace,info,warn,error};
 use std::ffi::{CString,CStr};
 use std::ptr::{self,null_mut};
@@ -67,12 +67,13 @@ impl Server {
         }
     }
  
-    fn stat(&self, name: &Option<String>, _info: Option<Attribs>, api: PbsStatSignature) -> Result<StatResp,String> {
+    fn stat(&self, name: &Option<String>, info: Option<Attribs>, api: PbsStatSignature) -> Result<StatResp,String> {
+        let attribs: ConstList<attrl> = if let Some(i) = info { i.into()} else {List::new().into()};
         //FIXME send constraints to api
         let n_ptr = optstr_to_cstr(name.as_deref());
         let data = {
             trace!("Performing stat");
-            let resp = unsafe{api(self.conn(), n_ptr, null_mut(), null_mut())};
+            let resp = unsafe{api(self.conn(), n_ptr, attribs.head() as *mut attrl, null_mut())};
             if !n_ptr.is_null() {
                 trace!("dropping n_ptr");
                 _ = unsafe{CString::from_raw(n_ptr)};
@@ -111,6 +112,7 @@ impl Server {
         let attribs: ConstList<pbs_sys::attrl> = attributes.into();
         //bindings::attropl and bindings::attrl are interchangable
         trace!("Submitting reservation request");
+        //TODO option to pass 'm' as extend arg for maintenance reservations
         let resvid = unsafe{pbs_sys::pbs_submit_resv(self.conn(), attribs.head() as *mut pbs_sys::attropl, ptr::null_mut())};
         if !resvid.is_null() {
             let resp = Ok(unsafe{CStr::from_ptr(resvid)}.to_str().unwrap().to_string());
@@ -128,6 +130,7 @@ impl Server {
         let attribs: ConstList<pbs_sys::attrl> = attributes.into();
         //bindings::attropl and bindings::attrl are interchangable
         trace!("Submitting reservation modification request");
+        //TODO opton to pass 'force' as extend arg to force changes
         let resvid = unsafe{pbs_sys::pbs_modify_resv(self.conn(), helpers::str_to_cstr(resv), attribs.head() as *mut pbs_sys::attropl, ptr::null_mut())};
         if !resvid.is_null() {
             let resp = Ok(unsafe{CStr::from_ptr(resvid)}.to_str().unwrap().to_string());
