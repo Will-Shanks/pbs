@@ -78,7 +78,7 @@ impl Attribs {
                         let temp = x.val();
                         let split = temp.split(' ');
                         for s in split {
-                            if s=="" {break}
+                            if s.is_empty() {break}
                             let mut v = s.split(':');
                             let state = v.next().unwrap();
                             let num = v.next().unwrap();

@@ -13,6 +13,11 @@ pub enum ResvModFlag {
     Force,
 }
 
+#[derive(PartialEq)]
+pub enum ResvSubFlag {
+    Maintenance,
+}
+
 // signature for most of the pbs_stat* functions
 type PbsStatSignature = unsafe extern fn(i32, *mut i8, *mut attrl, *mut i8) -> *mut batch_status;
 
@@ -110,13 +115,14 @@ impl Server {
         }
     }
 
-    pub fn submit_resv(&self, attributes: Attribs) -> Result<String, String> {
+    pub fn submit_resv(&self, attributes: Attribs, flags: Vec<ResvSubFlag>) -> Result<String, String> {
         trace!("Reservation submission, generating attributes list");
         let attribs: ConstList<pbs_sys::attrl> = attributes.into();
-        //bindings::attropl and bindings::attrl are interchangable
+        let extend = if flags.contains(&ResvSubFlag::Maintenance) {helpers::str_to_cstr("m")} else {null_mut()};
         trace!("Submitting reservation request");
+        //bindings::attropl and bindings::attrl are interchangable
         //TODO option to pass 'm' as extend arg for maintenance reservations
-        let resvid = unsafe{pbs_sys::pbs_submit_resv(self.conn(), attribs.head() as *mut pbs_sys::attropl, ptr::null_mut())};
+        let resvid = unsafe{pbs_sys::pbs_submit_resv(self.conn(), attribs.head() as *mut pbs_sys::attropl, extend)};
         if !resvid.is_null() {
             let resp = Ok(unsafe{CStr::from_ptr(resvid)}.to_str().unwrap().to_string());
             trace!("Reservation submitted, got resp {:?}", &resp);

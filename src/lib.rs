@@ -4,5 +4,5 @@ mod bindings;
 mod api;
 
 pub use types::{Attrl, Attribs, Resource, Server, Status, StatResp, Op};
-pub use api::ResvModFlag;
+pub use api::{ResvSubFlag,ResvModFlag};
 
