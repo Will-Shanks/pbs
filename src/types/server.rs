@@ -1,4 +1,4 @@
-use log::trace;
+use log::{debug,warn};
 use std::ptr;
 use std::ffi::CString;
 use crate::bindings;
@@ -13,14 +13,14 @@ pub struct Server {
 impl Server {
     /// Connect to the default PBS server
     pub fn new() -> Server {
-        trace!("Connecting to pbs server");
+        debug!("Connecting to pbs server");
         Server{conn: unsafe{pbs_sys::pbs_connect(ptr::null_mut())}}
     }
 
     /// Connect to the specified pbs server
     /// takes a server address of the form <hostname>[:<port>]
     pub fn connect_to(srv: &str) -> Result<Server,String> {
-        trace!("Connecting to pbs server {}", srv);
+        debug!("Connecting to pbs server {}", srv);
         let server = CString::new(srv.to_string()).unwrap();
         match unsafe{pbs_sys::pbs_connect(server.as_ptr() as *mut i8)} {
             -1 => Err(bindings::get_err()),
@@ -35,7 +35,7 @@ impl Server {
 impl Drop for Server {
     fn drop(&mut self) {
         if 0 != unsafe{pbs_sys::pbs_disconnect(self.conn)} {
-            println!("Error disconnecting {}", bindings::get_err());
+            warn!("Error disconnecting {}", bindings::get_err());
         }
     }
 }

@@ -1,11 +1,11 @@
 use linked_list_c::{ConstList,List};
-use log::{trace,info,warn,error};
+use log::{trace,info,debug,warn,error};
 use std::ffi::{CString,CStr};
 use std::ptr::{self,null_mut};
 use pbs_sys::{attrl, attropl, batch_status};
 
 use crate::bindings::{is_err,get_err,stat};
-use crate::helpers::{self,optstr_to_cstr};
+use crate::helpers::{self,optstr_to_cstr,cstr_to_str};
 use crate::types::{Attribs,StatResp,Server};
 
 
@@ -21,35 +21,35 @@ unsafe extern fn srv_stat(conn: i32, n: *mut i8, a: *mut attrl, _ex: *mut i8) ->
 }
 impl Server {
     pub fn stat_host(&self, name: &Option<String>, info: Option<Attribs>) -> Result<StatResp, String> {
-        trace!("performing a host stat");
+        debug!("performing a host stat");
         self.stat(name, info, stat::pbs_stathost)
     }
     pub fn stat_reservation(&self, name: &Option<String>, info: Option<Attribs>) -> Result<StatResp, String> {
-        trace!("performing a reservation stat");
+        debug!("performing a reservation stat");
         self.stat(name, info, stat::pbs_statresv)
     }
     pub fn stat_resource(&self, name: &Option<String>, info: Option<Attribs>) -> Result<StatResp, String> {
-        trace!("performing a resource stat");
+        debug!("performing a resource stat");
         self.stat(name, info, stat::pbs_statrsc)
     }
     pub fn stat_vnode(&self, name: &Option<String>, info: Option<Attribs>) -> Result<StatResp, String> {
-        trace!("performing a vnode stat");
+        debug!("performing a vnode stat");
         self.stat(name, info, stat::pbs_statvnode)
     }
     pub fn stat_que(&self, name: &Option<String>, info: Option<Attribs>) -> Result<StatResp, String> {
-        trace!("performing a que stat");
+        debug!("performing a que stat");
         self.stat(name, info, stat::pbs_statque)
     }
     pub fn stat_scheduler(&self, name: &Option<String>, info: Option<Attribs>) -> Result<StatResp, String> {
-        trace!("performing a scheduler stat");
+        debug!("performing a scheduler stat");
         self.stat(name, info, sched_stat)
     }
     pub fn stat_server(&self, name: &Option<String>, info: Option<Attribs>) -> Result<StatResp, String> {
-        trace!("performing a server stat");
+        debug!("performing a server stat");
         self.stat(name, info, srv_stat)
     }
     pub fn stat_job(&self, criteria: Attribs, _output: Option<Attribs>) -> Result<StatResp, String> {
-        trace!("performing a job stat");
+        debug!("performing a job stat");
         let crit: ConstList<attrl> = criteria.into();
         //TODO send criteria to api
         //let out: ConstList<attrl> = output.unwrap().into();
@@ -62,14 +62,13 @@ impl Server {
             error!("job stat request failed {}", get_err());
             Err(get_err())
         }else{
-            trace!("stat complete, returning list {:?}", &data);
+            debug!("stat complete, returning list {:?}", &data);
             Ok(data.into())
         }
     }
  
     fn stat(&self, name: &Option<String>, info: Option<Attribs>, api: PbsStatSignature) -> Result<StatResp,String> {
         let attribs: ConstList<attrl> = if let Some(i) = info { i.into()} else {List::new().into()};
-        //FIXME send constraints to api
         let n_ptr = optstr_to_cstr(name.as_deref());
         let data = {
             trace!("Performing stat");
@@ -86,7 +85,7 @@ impl Server {
                 Ok(resp)
             }
         }?;
-        trace!("stat complete, returning list {:?}", &data);
+        debug!("stat complete, returning list {:?}", &data);
         Ok(data.into())
     }
 

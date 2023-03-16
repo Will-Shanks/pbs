@@ -1,6 +1,6 @@
 use crate::types::{Attribs,Attrl};
 use linked_list_c::{ConstList,CustomList};
-use log::trace;
+use log::{trace,debug};
 use pbs_sys::attrl;
 use std::ffi::CStr;
 use std::ptr;
@@ -24,7 +24,7 @@ pub fn get_err() -> String {
 
 impl From<Attribs> for ConstList<'_, attrl> {
     fn from(attribs: Attribs) -> ConstList<'static, attrl> {
-        trace!("Converting Attribs to ConstList<attrl>");
+        debug!("Converting Attribs to ConstList<attrl>");
         let mut list: CustomList<attrl> = unsafe{CustomList::from(ptr::null_mut(), |x| {_ = Box::from_raw(x);})};
         for (name, val) in attribs.attribs().iter() {
             match val {

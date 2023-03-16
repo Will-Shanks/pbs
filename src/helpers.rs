@@ -5,6 +5,7 @@ use serde_json::Value;
 //Helper function to convert cstr into a str
 //TODO FIXME not really static
 pub(crate) fn cstr_to_str(instr: *mut i8) -> &'static str {
+    if instr == null_mut() { return "" };
     unsafe{CStr::from_ptr(instr)}.to_str().unwrap()
 }
 

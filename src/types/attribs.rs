@@ -1,7 +1,7 @@
 use crate::helpers;
 use crate::types::{Attrl,Op};
 use linked_list_c::ConstList;
-use log::{trace,error};
+use log::{trace,debug,error};
 use pbs_sys::attrl;
 use regex::Regex;
 use serde_json::{self,Value};
@@ -104,7 +104,7 @@ impl Attribs {
 //TODO take a *bindings::attrl instead?
 impl From<ConstList<'_, attrl>> for Attribs {
     fn from(l: ConstList<attrl>) -> Attribs {
-        trace!("Converting ConstList<attrl> to Attribs");
+        debug!("Converting ConstList<attrl> to Attribs");
         let mut attribs = Attribs::new();
         for a in l {
             trace!("adding elem {:?}", a);
