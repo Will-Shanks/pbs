@@ -5,9 +5,13 @@ use std::ptr::{self,null_mut};
 use pbs_sys::{attrl, attropl, batch_status};
 
 use crate::bindings::{is_err,get_err,stat};
-use crate::helpers::{self,optstr_to_cstr,cstr_to_str};
+use crate::helpers::{self,optstr_to_cstr};
 use crate::types::{Attribs,StatResp,Server};
 
+#[derive(PartialEq)]
+pub enum ResvModFlag {
+    Force,
+}
 
 // signature for most of the pbs_stat* functions
 type PbsStatSignature = unsafe extern fn(i32, *mut i8, *mut attrl, *mut i8) -> *mut batch_status;
@@ -124,13 +128,13 @@ impl Server {
         }
     }
 
-    pub fn mod_resv(&self, resv: &str, attributes: Attribs) -> Result<String, String> {
+    pub fn mod_resv(&self, resv: &str, attributes: Attribs, flags: Vec<ResvModFlag>) -> Result<String, String> {
         trace!("Modify reservation submission, generating attributes list");
         let attribs: ConstList<pbs_sys::attrl> = attributes.into();
-        //bindings::attropl and bindings::attrl are interchangable
+        let extend = if flags.contains(&ResvModFlag::Force) {helpers::str_to_cstr("force")} else {null_mut()};
         trace!("Submitting reservation modification request");
-        //TODO opton to pass 'force' as extend arg to force changes
-        let resvid = unsafe{pbs_sys::pbs_modify_resv(self.conn(), helpers::str_to_cstr(resv), attribs.head() as *mut pbs_sys::attropl, ptr::null_mut())};
+        //bindings::attropl and bindings::attrl are interchangable
+        let resvid = unsafe{pbs_sys::pbs_modify_resv(self.conn(), helpers::str_to_cstr(resv), attribs.head() as *mut pbs_sys::attropl, extend)};
         if !resvid.is_null() {
             let resp = Ok(unsafe{CStr::from_ptr(resvid)}.to_str().unwrap().to_string());
             trace!("Reservation modification submitted, got resp {:?}", &resp);
