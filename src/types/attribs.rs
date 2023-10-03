@@ -16,7 +16,7 @@ pub struct Attribs {
 }
 
 impl Attribs {
-    fn new() -> Attribs {
+    pub(crate) fn new() -> Attribs {
         Attribs{attribs: BTreeMap::new()}
     }
     pub(crate) fn attribs(&self) -> &BTreeMap<String, Attrl> {

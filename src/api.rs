@@ -6,7 +6,7 @@ use pbs_sys::{attrl, attropl, batch_status};
 
 use crate::bindings::{is_err,get_err,stat};
 use crate::helpers::{self,optstr_to_cstr};
-use crate::types::{Attribs,StatResp,Server};
+use crate::types::{Attribs,StatResp,Server,Attrl,Op};
 
 #[derive(PartialEq)]
 pub enum ResvModFlag {
@@ -81,7 +81,7 @@ impl Server {
         let n_ptr = optstr_to_cstr(name.as_deref());
         let data = {
             trace!("Performing stat");
-            let resp = unsafe{api(self.conn(), n_ptr, attribs.head() as *mut attrl, null_mut())};
+            let resp = unsafe{api(self.conn(), n_ptr, attribs.head(), null_mut())};
             if !n_ptr.is_null() {
                 trace!("dropping n_ptr");
                 _ = unsafe{CString::from_raw(n_ptr)};
@@ -166,6 +166,47 @@ impl Server {
         let resp = unsafe{pbs_sys::pbs_delresv(self.conn(), helpers::str_to_cstr(id),ptr::null_mut())};
         if resp != 0 {
             info!("Error deleting Reservation {id}: {}", get_err());
+            return Err(get_err());
+        }
+        Ok(())
+    }
+    pub fn offline_vnode(&self, name: &str, comment: Option<&str>) -> Result<(), String> {
+        trace!("offlining vnode: {name}");
+        //ret = marknode(con, name, ND_offline, pbs_sys::batch_op::INCR, null_mut(), pbs_sys::batch_op::INCR, comment)
+        let mut new =  Attribs::new();
+        new.add(helpers::cstr_to_str(pbs_sys::ATTR_NODE_state.as_ptr() as *mut i8).to_string(), Attrl::Value(Op::Incr("offline".to_string())));
+        if let Some(c) = comment {
+            new.add(helpers::cstr_to_str(pbs_sys::ATTR_comment.as_ptr() as *mut i8).to_string(), Attrl::Value(Op::Set(c.to_string())))
+        }
+        let new: ConstList<attrl> = new.into();
+        let resp = unsafe{pbs_sys::pbs_manager(self.conn(),
+            pbs_sys::mgr_cmd_MGR_CMD_SET,
+            pbs_sys::mgr_obj_MGR_OBJ_HOST,
+            helpers::str_to_cstr(name), new.head() as *mut attropl, null_mut()
+        )};
+        if resp != 0 {
+            info!("Error offlining vnode {name}: {}", get_err());
+            return Err(get_err());
+        }
+        Ok(())
+    }
+    pub fn clear_vnode(&self, name: &str, comment: Option<&str>) -> Result<(), String> {
+        trace!("clearing offline,down for vnode: {name}");
+        //ret = marknode(con, name, "offline", pbs_sys::batch_op::DECR, "down", pbs_sys::batch_op::DECR, comment)
+        let mut new =  Attribs::new();
+        new.add(helpers::cstr_to_str(pbs_sys::ATTR_NODE_state.as_ptr() as *mut i8).to_string(), Attrl::Value(Op::Decr("offline".to_string())));
+        new.add(helpers::cstr_to_str(pbs_sys::ATTR_NODE_state.as_ptr() as *mut i8).to_string(), Attrl::Value(Op::Decr("down".to_string())));
+        if let Some(c) = comment {
+            new.add(helpers::cstr_to_str(pbs_sys::ATTR_comment.as_ptr() as *mut i8).to_string(), Attrl::Value(Op::Set(c.to_string())))
+        }
+        let new: ConstList<attrl> = new.into();
+        let resp = unsafe{pbs_sys::pbs_manager(self.conn(),
+            pbs_sys::mgr_cmd_MGR_CMD_SET,
+            pbs_sys::mgr_obj_MGR_OBJ_HOST,
+            helpers::str_to_cstr(name), new.head() as *mut attropl, null_mut()
+        )};
+        if resp != 0 {
+            info!("Error offlining vnode {name}: {}", get_err());
             return Err(get_err());
         }
         Ok(())
