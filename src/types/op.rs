@@ -1,7 +1,7 @@
 /// Different op codes that can be set on an Attrl's value
 use pbs_sys::batch_op;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Op {
     Set(String),
     Unset(String),

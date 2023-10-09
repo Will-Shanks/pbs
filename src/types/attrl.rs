@@ -3,7 +3,7 @@ use crate::types::Op;
 use pbs_sys::attrl;
 use std::collections::BTreeMap;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Attrl {
     Value(Op),
     Resource(BTreeMap<String, Op>),
