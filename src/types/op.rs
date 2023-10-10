@@ -63,9 +63,13 @@ impl Op {
         }
     }
     pub(crate) fn new(val: Option<String>, op: Option<&str>) -> Op {
-        if val.is_none() { return Op::Default("".to_string()) };
+        if val.is_none() {
+            return Op::Default("".to_string());
+        };
         let val = val.unwrap();
-        if op.is_none() { return Op::Default(val) };
+        if op.is_none() {
+            return Op::Default(val);
+        };
         let op = op.unwrap();
         //TODO figure out how to handle Set and Equal differently
         match op {

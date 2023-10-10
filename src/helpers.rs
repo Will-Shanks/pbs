@@ -1,12 +1,14 @@
-use std::ffi::{CStr,CString};
-use std::ptr::null_mut;
 use serde_json::Value;
+use std::ffi::{CStr, CString};
+use std::ptr::null_mut;
 
 //Helper function to convert cstr into a str
 //TODO FIXME not really static
 pub(crate) fn cstr_to_str(instr: *mut i8) -> &'static str {
-    if instr.is_null() { return "" };
-    unsafe{CStr::from_ptr(instr)}.to_str().unwrap()
+    if instr.is_null() {
+        return "";
+    };
+    unsafe { CStr::from_ptr(instr) }.to_str().unwrap()
 }
 
 //Helper function to convert str to a cstr
@@ -25,26 +27,26 @@ pub(crate) fn optstr_to_cstr(instr: Option<&str>) -> *mut i8 {
 
 pub(crate) fn json_val(val: String) -> Value {
     if let Ok(num) = val.parse() {
-        return Value::Number(num)
+        return Value::Number(num);
     } else if val.ends_with("tb") {
-        if let Ok(num) = val[..val.len()-2].parse::<isize>() {
-            return Value::Number((num*1000000).into());
+        if let Ok(num) = val[..val.len() - 2].parse::<isize>() {
+            return Value::Number((num * 1000000).into());
         }
     } else if val.ends_with("gb") {
-        if let Ok(num) = val[..val.len()-2].parse::<isize>() {
-            return Value::Number((num*1000).into());
+        if let Ok(num) = val[..val.len() - 2].parse::<isize>() {
+            return Value::Number((num * 1000).into());
         }
     } else if val.ends_with("mb") {
-        if let Ok(num) = val[..val.len()-2].parse::<isize>() {
+        if let Ok(num) = val[..val.len() - 2].parse::<isize>() {
             return Value::Number(num.into());
         }
     } else if val.ends_with("kb") {
-        if let Ok(num) = val[..val.len()-2].parse::<isize>() {
-            return Value::Number((num/1000).into());
+        if let Ok(num) = val[..val.len() - 2].parse::<isize>() {
+            return Value::Number((num / 1000).into());
         }
     } else if val.ends_with('b') {
-        if let Ok(num) = val[..val.len()-1].parse::<isize>() {
-            return Value::Number((num/1000000).into());
+        if let Ok(num) = val[..val.len() - 1].parse::<isize>() {
+            return Value::Number((num / 1000000).into());
         }
     } else if val.to_lowercase() == "true" {
         return Value::Bool(true);
@@ -53,4 +55,3 @@ pub(crate) fn json_val(val: String) -> Value {
     }
     Value::String(val)
 }
-

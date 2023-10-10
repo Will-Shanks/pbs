@@ -1,10 +1,10 @@
 use crate::helpers;
-use crate::types::{Attrl,Op};
+use crate::types::{Attrl, Op};
 use linked_list_c::ConstList;
-use log::{trace,debug,error};
+use log::{debug, error, trace};
 use pbs_sys::attrl;
 use regex::Regex;
-use serde_json::{self,Value};
+use serde_json::{self, Value};
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::fmt;
@@ -12,12 +12,14 @@ use std::fmt;
 /// PBS resource attributes
 #[derive(Debug)]
 pub struct Attribs {
-    attribs: BTreeMap<String, Attrl>
+    attribs: BTreeMap<String, Attrl>,
 }
 
 impl Attribs {
     pub(crate) fn new() -> Attribs {
-        Attribs{attribs: BTreeMap::new()}
+        Attribs {
+            attribs: BTreeMap::new(),
+        }
     }
     pub(crate) fn attribs(&self) -> &BTreeMap<String, Attrl> {
         &self.attribs
@@ -32,8 +34,8 @@ impl Attribs {
                 } else {
                     error!("trying to combine an Attrl::Value and Attrl::Resource");
                     trace!("Ignoring new value {value:?} for attrib {name}");
-                } 
-            },
+                }
+            }
             Some(Attrl::Resource(old)) => {
                 if let Attrl::Resource(mut new) = value {
                     trace!("Combining attributes for {name}");
@@ -42,11 +44,11 @@ impl Attribs {
                     error!("trying to combine an Attrl::Value and Attrl::Resource");
                     trace!("Ignoring new value {value:?} for attrib {name}");
                 }
-            },
+            }
             None => {
                 trace!("Adding attrib {}", name);
                 self.attribs.insert(name, value);
-            },
+            }
         };
     }
 
@@ -78,23 +80,28 @@ impl Attribs {
                         let temp = x.val();
                         let split = temp.split(' ');
                         for s in split {
-                            if s.is_empty() {break}
+                            if s.is_empty() {
+                                break;
+                            }
                             let mut v = s.split(':');
                             let state = v.next().unwrap();
                             let num = v.next().unwrap();
-                            attribs.insert(format!("{}.{}", name, state), helpers::json_val(num.to_string()));
+                            attribs.insert(
+                                format!("{}.{}", name, state),
+                                helpers::json_val(num.to_string()),
+                            );
                         }
                     } else if name == "comment" {
                         attribs.insert(name.to_string(), Value::String(x.val()));
                     } else {
                         attribs.insert(name.to_string(), helpers::json_val(x.val()));
                     }
-                },
+                }
                 Attrl::Resource(map) => {
-                    for (r,v) in map {
+                    for (r, v) in map {
                         attribs.insert(format!("{}.{}", name, r), helpers::json_val(v.val()));
                     }
-                },
+                }
             }
         }
         serde_json::to_value(attribs).unwrap()
@@ -123,7 +130,7 @@ impl From<&Vec<String>> for Attribs {
         // value should usually be \w+, but selects are way more complicated
         let re = Regex::new(r"^(\w+)(\.\w+)?(=|!=|>=|<=|<|>)?(.*)?$").unwrap();
         for s in a {
-            if let Some(vals) = re.captures(s){
+            if let Some(vals) = re.captures(s) {
                 let name = vals.get(1).unwrap().as_str().to_string();
                 let v = vals.get(4).map(|x| x.as_str().to_string());
                 let comp = vals.get(3).map(|x| x.as_str());
@@ -133,7 +140,7 @@ impl From<&Vec<String>> for Attribs {
                     //drop '.' from resource match
                     map.insert(r.as_str()[1..].to_string(), op);
                     attribs.add(name, Attrl::Resource(map));
-                }else{
+                } else {
                     attribs.add(name, Attrl::Value(op));
                 }
             }
@@ -149,10 +156,10 @@ impl fmt::Display for Attribs {
             match val {
                 Attrl::Value(x) => writeln!(f, "\t{}: {}", name, x.val())?,
                 Attrl::Resource(map) => {
-                    for (r,v) in map {
+                    for (r, v) in map {
                         writeln!(f, "\t{}.{}: {}", name, r, v.val())?
                     }
-                },
+                }
             }
         }
         Ok(())
