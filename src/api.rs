@@ -319,10 +319,6 @@ impl Server {
             helpers::cstr_to_str(pbs_sys::ATTR_NODE_state.as_ptr() as *mut i8).to_string(),
             Attrl::Value(Op::Decr("offline".to_string())),
         );
-        new.add(
-            helpers::cstr_to_str(pbs_sys::ATTR_NODE_state.as_ptr() as *mut i8).to_string(),
-            Attrl::Value(Op::Decr("down".to_string())),
-        );
         if let Some(c) = comment {
             new.add(
                 helpers::cstr_to_str(pbs_sys::ATTR_comment.as_ptr() as *mut i8).to_string(),
